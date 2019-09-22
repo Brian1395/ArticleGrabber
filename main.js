@@ -1,28 +1,3 @@
-/*function myFunction() {
-  var page = genHTML("http://www.google.com");
-  var app = HtmlService.createHtmlOutput();
-  app.append("DAB");
-}
-
-function showURL(href){
-  var app = HtmlService.createApplication().setHeight(50).setWidth(200);
-  app.setTitle("Show URL");
-  var link = app.createAnchor('open ', href).setId("link");
-  app.add(link);  
-  var doc = SpreadsheetApp.getActive();
-  doc.show(app);
-}
-
-function genHTML(href){
-  var html = UrlFetchApp.fetch('http://en.wikipedia.org/wiki/Document_Object_Model').getContentText();
-  var doc = XmlService.parse(html);
-  var html = doc.getRootElement();
-  var menu = getElementsByClassName(html, 'vertical-navbox nowraplinks')[0];
-  var output = XmlService.getRawFormat().format(menu);
-  return HtmlService.createHtmlOutput(output);
-}
-*/
-
 function getElementsByClassName(element, classToFind) {  
   var data = [];
   var descendants = element.getDescendants();
@@ -68,10 +43,6 @@ function doGet(url_raw) {
   catch(jasdvkj){
     return("N/A")
   }
-  //var doc = XmlService.parse(html);
- // var html = doc.getRootElement();
-  //var menu = getElementsByTagName(html, 'p')[0];
-  //var output = XmlService.getRawFormat().format(menu);
   return html//HtmlService.createHtmlOutput(output);
 }  
 
@@ -81,10 +52,6 @@ function processURL(url_raw){
   st = ">" + st
   var e = url_raw.search(st);
   var b = 1;
- // if(url_raw.search("<div>") != -1){  
- //   var s = url_raw.search("href=");
- //   var e = url_raw.search(">")
- // };
   var url = url_raw.slice(s+6,(e/1)-b);
   return(url)
 }
@@ -152,16 +119,7 @@ function processHTML(content){
   finstring = finstring.replace(/-->/g,"")
   return (finstring)
 }
-/*
-function getSite(url_raw){
-  var url = processURL(url_raw);
-  var html = UrlFetchApp.fetch(url).getContentText();
-  var doc = XmlService.parse(html);
-  //var html = doc.getRootElement();
-  var text = doc.getElementsByClassName(doc,'a');
-  //HtmlService.createHtmlOutput(output)
-  return(text)
-}*/
+
 function getTargetEmails(){
   var threads = GmailApp.search('in:inbox subject:"ARTICLE"')
   
