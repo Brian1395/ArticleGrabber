@@ -1,3 +1,13 @@
+/*
+Created by Brian Goodell
+
+Issues / Potential Issues:
+
+
+Cool Things I could implament:
+-Image compatibility
+*/
+
 function getElementsByClassName(element, classToFind) {  
   var data = [];
   var descendants = element.getDescendants();
@@ -43,7 +53,7 @@ function doGet(url_raw) {
   catch(jasdvkj){
     return("N/A")
   }
-  return html//HtmlService.createHtmlOutput(output);
+  return html
 }  
 
 function processURL(url_raw){
@@ -78,23 +88,40 @@ function processHTML(content){
   }
 
 
-  var comb = ""
+  var comb = "" 
   for (v in text){
-    comb = comb + text[v]
+    comb = comb + text[v] //Comb has all of the text and html formating of the article, next links are removed
   }
   var links = comb.split('</a>')
-  var fin = []
+  var almost_fin = []
   var starts = ""
   var ends = ""
   for (n in links){
-    starts = links[n].slice(0,links[n].indexOf('<a'))
-    var iwnvi = links[n].lastIndexOf('>') + 1
-    ends = links[n].slice(iwnvi)
-    fin.push(starts)
-    fin.push(ends)
+    starts = links[n].slice(0,links[n].indexOf('<a')) //All of the text before the link
+    var iwnvi = links[n].lastIndexOf('>') + 1 
+    ends = links[n].slice(iwnvi) //The text of the link
+    almost_fin.push(starts)
+    almost_fin.push(ends)
   }
-
-
+  
+  var honey = "" 
+  for (i in almost_fin){
+    honey = honey + almost_fin[i] //Comb becomes honey, now links are removed, next html bolding will be removed but the text will be saved to be rebolded in doc
+  }
+  var bolds = honey.split('</strong>')
+  var fin = []
+  var bolded_text = []
+  var bstarts = ""
+  var bends = ""
+  for (n in bolds){
+    bstarts = bolds[n].slice(0,bolds[n].indexOf('<strong')) //All of the text before the bold
+    var iwnaebvi = bolds[n].lastIndexOf('>') + 1 
+    bends = bolds[n].slice(iwnaebvi) //The bolded text
+    fin.push(bstarts)
+    fin.push(bends)
+    bolded_text.push(bends) //This text will be re-bolded in the final google doc
+  }
+  
   var finstring = ""
   for (m in fin){
     finstring = finstring + fin[m]
@@ -110,37 +137,16 @@ function processHTML(content){
     finstring = finstring.replace("</b>","")
   }
 
-  finstring = finstring.replace(/<strong>/g,"")
-  while(finstring.indexOf("</strong>")>-1){
-    finstring = finstring.replace("</strong>","")
-  }
-
   finstring = finstring.replace(/<!--/g,"")
   finstring = finstring.replace(/-->/g,"")
-  return (finstring)
+  var package = []
+  package.push(finstring)
+  package.push(bolded_text)
+  return (package)
 }
 
-function getTargetEmails(){
-  var threads = GmailApp.search('in:inbox subject:"ARTICLE"')
-  
-  for(i = 0; i < threads.length; i++){
-    var messages = threads[i].getMessages()
-    for(x = 0; x < threads.length; x++){
-      var link = messages[x].getBody()
-      if(link[0] == 'h' || link[0] == 'w'){
-        threads[i].reply("Unfortuntaly this link was unable to be processed, please check that your email isn't in plain text mode and try again")
-        return
-      }
-      var content = doGet(link)
-      if(content == "NA"){
-        return
-      }
-      
-      
-      var finstring = processHTML(content)
-      
-//Finds Title of Article      
-      var title = "UNKNOWN TITLE"
+function extractTitle(content){
+        var title = "UNKNOWN TITLE"
       var titlepos = content.indexOf("</h1>") 
       if(titlepos  > -1){
         var step1 = content.slice(0,titlepos)
@@ -161,19 +167,76 @@ function getTargetEmails(){
         weuaboiefb = step1.lastIndexOf(">")+1
         title = step1.slice(weuaboiefb)
       }
-      
-      
-      var doc = DocumentApp.create('DiscoTest');
-      if(title != "UNKNOWN TITLE" && title.length > 3){
-        doc.setName(title)
+  return(title)
+}
+
+
+
+function main(){
+  var threads = GmailApp.search('in:inbox subject:"ARTICLE"')
+  for(var i = 0; i < threads.length; i++){
+    var messages = threads[i].getMessages()
+    for(var x = 0; x < threads.length; x++){
+      var link = messages[x].getBody()
+      if(link[0] == 'h' || link[0] == 'w'){
+        threads[i].reply("Unfortuntaly this link was unable to be processed, please check that your email isn't in plain text mode and try again")
+        return
       }
-      doc.setText(finstring)
+      var content = doGet(link)
+      if(content == "NA"){
+        return
+      }
+      
+      
+      var package = processHTML(content);
+      var finstring = package[0]
+      var bolded_text = package[1]
+      
+      var title = extractTitle(content);
+       
       try{
-        threads[i].reply("GO TO DOC: " + doc.getUrl() + " \n\n RAW ARTICLE: \n" + title + '\n\n' + processURL(link) + '\n\n' + finstring)
+        var doc = DocumentApp.create('DiscoTest');
+        doc.setText(finstring)
+        if(title != "UNKNOWN TITLE" && title.length > 3){
+          doc.setName(title)
+          var text = doc.getBody().editAsText();
+          text.insertText(0, title + '\n\n');
+          var style = {};
+          style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] =
+            DocumentApp.HorizontalAlignment.CENTER;
+          style[DocumentApp.Attribute.FONT_SIZE] = 20;
+          style[DocumentApp.Attribute.BOLD] = true;
+          text.setAttributes(0,title.length,style)
+        }
+        
+        //Rebolds specified text 
+        var bod = doc.getBody().editAsText()
+        for(m in bolded_text) {
+          var pos = finstring.indexOf(bolded_text[m]) + title.length + 1
+          var endpos = pos + bolded_text[m].length
+          bod.setBold(pos, endpos, true)
+        }
+          
+        
+        var doc_link = "GO TO DOC: " + doc.getUrl()
+        
+        var email_raw = threads[i].getMessages()[0].getFrom()
+        var email = email_raw.slice(email_raw.indexOf('<') + 1,email_raw.indexOf('>'))
+        doc.addEditor(email)
+      }
+      catch(toomuch){
+        var doc_link = "GOOGLE DOC LIMIT ERROR: Too many documents have been created. The count resets tomorrow. \n\n" + toomuch;
+      }
+        
+
+      
+      try{
+        threads[i].reply(doc_link + " \n\n RAW ARTICLE: \n" + title + '\n\n' + processURL(link) + '\n\n' + finstring)
       }
       catch(er){
         threads[i].reply(er)
       }
+//      doc.saveAndClose()
       threads[i].moveToTrash()
       return;
     }
